@@ -1,5 +1,5 @@
-
 import copy
+import numpy
 
 psi = {}
 psi1 = [0.7, 0.3]
@@ -39,25 +39,22 @@ def initialize_messages(edges, numStates):
 
 #O(s * neighbors)
 def update(edge, state, neighbors, messages, numStates, psi, ecf):
+	print(edge)
 	[i,j] = edge
 	s = 0
 	for state_s in range(numStates):
-		print(i)
-		print(neighbors)
 		i_neighbors = neighbors[i]
 		product = 1
 		for n in i_neighbors:
 			if n != j:
-				print(n)
 				product *= messages[str(n)+'-'+str(i)][state_s]	
-				print(product)	
 		s += psi[i][state_s]*ecf[state_s][state]*product
+		print(s)
 	return s
 
 
 #O(Diameter*edges*states)*O(update)
-def sum_product(nodes, edges, numStates, psi, ecf, diameter):
-	neighbors = initialize_neighbors(edges)
+def sum_product(edges, neighbors, numStates, psi, ecf, diameter):
 	messages = initialize_messages(edges, numStates)
 	for step in range(diameter):
 		new_messages=copy.copy(messages)
@@ -66,14 +63,22 @@ def sum_product(nodes, edges, numStates, psi, ecf, diameter):
 			for state in range(numStates):
 				new_messages[str(i)+'-'+str(j)][state] = update(edge,state,neighbors,messages,numStates,psi,ecf)
 				new_messages[str(j)+'-'+str(i)][state] = update([j,i],state,neighbors,messages,numStates,psi,ecf)
-
 		messages=new_messages
-	print messages
-	#TODO: multiply by psi
-	#TODO: normalize
+	return messages
+
+def calculate_probability(nodes, neighbors, messages, psi):
+	probability = []
+	for n in range(1,nodes+1):
+		p = psi[n]
+		n_neighbors = neighbors[n]
+		for neighbor in n_neighbors:
+			p = numpy.multiply(p,messages[str(neighbor)+'-' + str(n)])
+		probability.append(p)
+	probability = [i/sum(i) for i in probability]
+	return probability
 
 
-
-
-sum_product(nodes, edges, numStates, psi, ecf, diameter)
-
+neighbors = initialize_neighbors(edges)
+final_messages = sum_product(edges, neighbors, numStates, psi, ecf, diameter)
+probability = calculate_probability(nodes,neighbors,final_messages,psi)
+print(probability)
